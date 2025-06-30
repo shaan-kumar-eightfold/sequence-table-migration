@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Table Migration Phases</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+        
+        .phase {
+            border: 3px dashed #7f8c8d;
+            border-radius: 15px;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(240,248,255,0.8) 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .phase:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+        
+        .phase-header {
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .phase-description {
+            text-align: center;
+            margin-bottom: 25px;
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .tables-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            gap: 40px;
+        }
+        
+        .table-section {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .table-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .old-table .table-title {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .new-table .table-title {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+        
+        .table {
+            border: 2px solid #34495e;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 12px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .table-row {
+            display: flex;
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.2s ease;
+        }
+        
+        .table-row:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .table-row:last-child {
+            border-bottom: none;
+        }
+        
+        .table-cell {
+            flex: 1;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 0.85em;
+            border-right: 1px solid #ecf0f1;
+        }
+        
+        .table-cell:last-child {
+            border-right: none;
+        }
+        
+        .auto-increment-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(52,152,219,0.3);
+        }
+        
+        .flow-arrows {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            gap: 20px;
+        }
+        
+        .arrow {
+            font-size: 2em;
+            color: #3498db;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+        
+        .flow-text {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(52,152,219,0.3);
+        }
+        
+        .buffer-note {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border-radius: 10px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(243,156,18,0.3);
+        }
+        
+        .phase0 { border-color: #e74c3c; }
+        .phase1 { border-color: #f39c12; }
+        .phase2 { border-color: #3498db; }
+        .phase3 { border-color: #27ae60; }
+        
+        /* Critical Issue Section Styles */
+        .critical-issue {
+            margin-top: 40px;
+            border: 4px solid #e74c3c;
+            border-radius: 15px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(231,76,60,0.1) 0%, rgba(192,57,43,0.1) 100%);
+            animation: pulse-border 3s infinite;
+        }
+        
+        @keyframes pulse-border {
+            0% { border-color: #e74c3c; }
+            50% { border-color: #c0392b; }
+            100% { border-color: #e74c3c; }
+        }
+        
+        .issue-header {
+            text-align: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .issue-description {
+            text-align: center;
+            font-size: 1.2em;
+            color: #c0392b;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        
+        .scenario-container {
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        
+        .scenario-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .scenario-description {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+        
+        .conflict-demo {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .user-action {
+            flex: 1;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .old-user {
+            background: linear-gradient(135deg, rgba(231,76,60,0.1) 0%, rgba(192,57,43,0.1) 100%);
+            border: 2px solid #e74c3c;
+        }
+        
+        .new-user {
+            background: linear-gradient(135deg, rgba(52,152,219,0.1) 0%, rgba(41,128,185,0.1) 100%);
+            border: 2px solid #3498db;
+        }
+        
+        .user-label {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .action-flow {
+            margin-bottom: 20px;
+        }
+        
+        .step {
+            background: rgba(255,255,255,0.8);
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .step.error {
+            background: rgba(231,76,60,0.2);
+            color: #c0392b;
+            font-weight: bold;
+        }
+        
+        .vs-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #e74c3c;
+            width: 60px;
+        }
+        
+        .table-mini, .table-mini-old, .table-mini-new {
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            background: white;
+            margin: 10px auto;
+            max-width: 200px;
+        }
+        
+        .old-table-mini {
+            border-color: #e74c3c;
+        }
+        
+        .new-table-mini {
+            border-color: #27ae60;
+        }
+        
+        .table-title-mini {
+            background: #34495e;
+            color: white;
+            padding: 8px;
+            font-weight: bold;
+            font-size: 0.8em;
+            text-align: center;
+        }
+        
+        .old-table-mini .table-title-mini {
+            background: #e74c3c;
+        }
+        
+        .new-table-mini .table-title-mini {
+            background: #27ae60;
+        }
+        
+        .table-content {
+            padding: 10px 5px;
+            font-size: 0.7em;
+        }
+        
+        .row-conflict {
+            background: rgba(231,76,60,0.2);
+            padding: 4px;
+            margin: 2px 0;
+            border-radius: 3px;
+        }
+        
+        .row-success {
+            background: rgba(39,174,96,0.2);
+            padding: 4px;
+            margin: 2px 0;
+            border-radius: 3px;
+        }
+        
+        .row-error {
+            background: rgba(231,76,60,0.3);
+            color: #c0392b;
+            padding: 4px;
+            margin: 2px 0;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .ai-info {
+            background: #3498db;
+            color: white;
+            padding: 4px;
+            font-size: 0.7em;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .tables-mini-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .arrow-mini {
+            font-size: 1.5em;
+            color: #3498db;
+        }
+        
+        .solution-box {
+            background: linear-gradient(135deg, rgba(39,174,96,0.1) 0%, rgba(46,204,113,0.1) 100%);
+            border: 2px solid #27ae60;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .solution-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .solution-points {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .solution-point {
+            color: #2c3e50;
+            font-weight: 500;
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Sequence Table Migration Phases</h1>
+        
+        <div class="diagram">
+            <!-- Phase 0 -->
+            <div class="phase phase0">
+                <div class="phase-header">Phase 0 - Current Flow</div>
+                <div class="phase-description">Generate sequence ID from old sequence table only</div>
+                
+                <div class="tables-container">
+                    <div class="table-section old-table">
+                        <div class="table-title">Old Sequence Table (Cluster 0)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">1</div>
+                                <div class="table-cell">101</div>
+                                <div class="table-cell">group_a</div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">2</div>
+                                <div class="table-cell">102</div>
+                                <div class="table-cell">group_b</div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">3</div>
+                                <div class="table-cell">103</div>
+                                <div class="table-cell">group_c</div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">4</div>
+                                <div class="table-cell">104</div>
+                                <div class="table-cell">group_d</div>
+                            </div>
+                        </div>
+                        <div class="auto-increment-info">Auto Increment: 5</div>
+                    </div>
+                    
+                    <div class="table-section new-table">
+                        <div class="table-title">New Sequence Table (Sequence Generator)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div style="padding: 40px; text-align: center; color: #95a5a6; font-style: italic;">
+                                No entries yet
+                            </div>
+                        </div>
+                        <div class="auto-increment-info">Auto Increment: 1</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 1 -->
+            <div class="phase phase1">
+                <div class="phase-header">Phase 1 - Dual Write (Old → New)</div>
+                <div class="phase-description">Generate from old table, then copy to new table with same ID</div>
+                
+                <div class="flow-arrows">
+                    <div class="flow-text">Old Table First</div>
+                    <div class="arrow">→</div>
+                    <div class="flow-text">Then Copy to New</div>
+                </div>
+                
+                <div class="tables-container">
+                    <div class="table-section old-table">
+                        <div class="table-title">Old Sequence Table (Cluster 0)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">1</div>
+                                <div class="table-cell">101</div>
+                                <div class="table-cell">group_a</div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">2</div>
+                                <div class="table-cell">102</div>
+                                <div class="table-cell">group_b</div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">3</div>
+                                <div class="table-cell">103</div>
+                                <div class="table-cell">group_c</div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">4</div>
+                                <div class="table-cell">104</div>
+                                <div class="table-cell">group_d</div>
+                            </div>
+                            <div class="table-row" style="background-color: #fff3cd;">
+                                <div class="table-cell">5</div>
+                                <div class="table-cell">105</div>
+                                <div class="table-cell">group_e</div>
+                            </div>
+                            <div class="table-row" style="background-color: #fff3cd;">
+                                <div class="table-cell">6</div>
+                                <div class="table-cell">106</div>
+                                <div class="table-cell">group_f</div>
+                            </div>
+                        </div>
+                        <div class="auto-increment-info">Auto Increment: 7</div>
+                    </div>
+                    
+                    <div class="table-section new-table">
+                        <div class="table-title">New Sequence Table (Sequence Generator)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">5</div>
+                                <div class="table-cell">105</div>
+                                <div class="table-cell">group_e</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">6</div>
+                                <div class="table-cell">106</div>
+                                <div class="table-cell">group_f</div>
+                            </div>
+                        </div>
+                        <div class="auto-increment-info">Auto Increment: 7</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buffer Note -->
+            <div class="buffer-note">
+                🔄 Buffer Phase: Set auto increment for new table = max(id) + buffer
+                <br>New table auto increment set to ensure no conflicts
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="phase phase2">
+                <div class="phase-header">Phase 2 - Dual Write (New → Old)</div>
+                <div class="phase-description">Generate from new table, then copy to old table with same ID</div>
+                
+                <div class="flow-arrows">
+                    <div class="flow-text">New Table First</div>
+                    <div class="arrow">→</div>
+                    <div class="flow-text">Then Copy to Old</div>
+                </div>
+                
+                <div class="tables-container">
+                    <div class="table-section new-table">
+                        <div class="table-title">New Sequence Table (Sequence Generator)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">...</div>
+                                <div class="table-cell">...</div>
+                                <div class="table-cell">...</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">107</div>
+                                <div class="table-cell">201</div>
+                                <div class="table-cell">group_x</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">108</div>
+                                <div class="table-cell">202</div>
+                                <div class="table-cell">group_y</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">109</div>
+                                <div class="table-cell">203</div>
+                                <div class="table-cell">group_z</div>
+                            </div>
+                        </div>
+                        <div class="auto-increment-info">Auto Increment: 110</div>
+                    </div>
+                    
+                    <div class="table-section old-table">
+                        <div class="table-title">Old Sequence Table (Cluster 0)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">...</div>
+                                <div class="table-cell">...</div>
+                                <div class="table-cell">...</div>
+                            </div>
+                            <div class="table-row" style="background-color: #fff3cd;">
+                                <div class="table-cell">107</div>
+                                <div class="table-cell">201</div>
+                                <div class="table-cell">group_x</div>
+                            </div>
+                            <div class="table-row" style="background-color: #fff3cd;">
+                                <div class="table-cell">108</div>
+                                <div class="table-cell">202</div>
+                                <div class="table-cell">group_y</div>
+                            </div>
+                            <div class="table-row" style="background-color: #fff3cd;">
+                                <div class="table-cell">109</div>
+                                <div class="table-cell">203</div>
+                                <div class="table-cell">group_z</div>
+                            </div>
+                        </div>
+                        <div class="auto-increment-info">Auto Increment: 110</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="phase phase3">
+                <div class="phase-header">Phase 3 - New Table Only</div>
+                <div class="phase-description">Generate sequence ID from new sequence table only (Migration Complete)</div>
+                
+                <div class="flow-arrows">
+                    <div class="flow-text">New Table Only</div>
+                    <div class="arrow">✅</div>
+                    <div class="flow-text">Migration Complete</div>
+                </div>
+                
+                <div class="tables-container">
+                    <div class="table-section new-table">
+                        <div class="table-title">New Sequence Table (Active)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div class="table-row">
+                                <div class="table-cell">...</div>
+                                <div class="table-cell">...</div>
+                                <div class="table-cell">...</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">150</div>
+                                <div class="table-cell">301</div>
+                                <div class="table-cell">group_new1</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">151</div>
+                                <div class="table-cell">302</div>
+                                <div class="table-cell">group_new2</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">152</div>
+                                <div class="table-cell">303</div>
+                                <div class="table-cell">group_new3</div>
+                            </div>
+                            <div class="table-row" style="background-color: #d4edda;">
+                                <div class="table-cell">153</div>
+                                <div class="table-cell">304</div>
+                                <div class="table-cell">group_new4</div>
+                            </div>
+                        </div>
+                        <div class="auto-increment-info">Auto Increment: 154</div>
+                    </div>
+                    
+                    <div class="table-section old-table">
+                        <div class="table-title">Old Sequence Table (Deprecated)</div>
+                        <div class="table">
+                            <div class="table-header">
+                                <div class="table-row">
+                                    <div class="table-cell">ID</div>
+                                    <div class="table-cell">Shard ID</div>
+                                    <div class="table-cell">Group ID</div>
+                                </div>
+                            </div>
+                            <div style="padding: 40px; text-align: center; color: #95a5a6; font-style: italic;">
+                                No new entries<br>
+                                (To be cleaned up later)
+                            </div>
+                        </div>
+                        <div class="auto-increment-info" style="background: #95a5a6;">Deprecated</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Critical Issue Section -->
+        <div class="critical-issue">
+            <div class="issue-header">⚠️ CRITICAL CONCURRENCY ISSUE</div>
+            <div class="issue-description">
+                Problem: Users with old code (Phase 0) can cause ID conflicts during Phase 2 & 3
+            </div>
+            
+            <div class="scenario-container">
+                <div class="scenario-title">Scenario: Phase 2 with Mixed Code Versions</div>
+                <div class="scenario-description">Both tables have Auto Increment = 110</div>
+                
+                <div class="conflict-demo">
+                    <div class="user-action old-user">
+                        <div class="user-label">👤 User with Old Code (Phase 0)</div>
+                        <div class="action-flow">
+                            <div class="step">1. Inserts into Old Table only</div>
+                            <div class="step">2. Gets ID = 110</div>
+                            <div class="step">3. Old table AI becomes 111</div>
+                        </div>
+                        <div class="table-mini old-table-mini">
+                            <div class="table-title-mini">Old Table</div>
+                            <div class="table-content">
+                                <div class="row-conflict">ID: 110 | Data: user1_data</div>
+                            </div>
+                            <div class="ai-info">AI: 111</div>
+                        </div>
+                    </div>
+                    
+                    <div class="vs-divider">VS</div>
+                    
+                    <div class="user-action new-user">
+                        <div class="user-label">👤 User with New Code (Phase 2)</div>
+                        <div class="action-flow">
+                            <div class="step">1. Inserts into New Table first</div>
+                            <div class="step">2. Gets ID = 110</div>
+                            <div class="step">3. Tries to copy to Old Table</div>
+                            <div class="step error">4. ❌ FAILS! ID 110 already exists</div>
+                        </div>
+                        <div class="tables-mini-container">
+                            <div class="table-mini new-table-mini">
+                                <div class="table-title-mini">New Table</div>
+                                <div class="table-content">
+                                    <div class="row-success">ID: 110 | Data: user2_data</div>
+                                </div>
+                                <div class="ai-info">AI: 111</div>
+                            </div>
+                            <div class="arrow-mini">→</div>
+                            <div class="table-mini old-table-mini">
+                                <div class="table-title-mini">Old Table</div>
+                                <div class="table-content">
+                                    <div class="row-conflict">ID: 110 | Data: user1_data</div>
+                                    <div class="row-error">❌ Can't insert ID: 110</div>
+                                </div>
+                                <div class="ai-info">AI: 111</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="solution-box">
+                    <div class="solution-title">💡 Solution Requirements</div>
+                    <div class="solution-points">
+                        <div class="solution-point">• Ensure ALL services are updated before enabling Phase 2</div>
+                        <div class="solution-point">• Add prerequisite checks in CI/CD pipeline</div>
+                        <div class="solution-point">• Monitor for any remaining Phase 0 code in production</div>
+                        <div class="solution-point">• Maintain sufficient buffer between auto-increment values</div>
+                        <div class="solution-point">• Implement proper error handling for duplicate key conflicts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
